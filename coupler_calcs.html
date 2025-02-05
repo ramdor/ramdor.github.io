@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>External Feedback Level Calcuations</title>
+    <script>
+        function calculate() {
+            let powerWatts = parseFloat(document.getElementById('power_watts').value);
+            let couplingFactor = parseFloat(document.getElementById('coupling_factor').value);
+            if (isNaN(powerWatts) || powerWatts <= 0) {
+                alert('Enter a valid power in Watts');
+                return;
+            }
+            if (isNaN(couplingFactor) || couplingFactor <= 0) {
+                alert('Enter a valid coupling factor in dB');
+                return;
+            }
+            let powerDbm = 10 * Math.log10(powerWatts) + 30;
+            let couplerOutput = powerDbm - couplingFactor;
+            let is7000or8000 = document.getElementById('radio_check').checked;
+            let inputPower = (is7000or8000 ? -11 : -17) + 25;
+            let additionalAttenuation = couplerOutput - inputPower;
+            document.getElementById('results').innerHTML = `
+                <p>Peak RF Power: ${powerDbm.toFixed(2)} dBm</p>
+                <p>Coupler Output Level @ Peak RF Power: ${couplerOutput.toFixed(2)} dBm</p>
+                <p>Required Input Power to Step Attenuator: ${inputPower.toFixed(2)} dBm</p>
+                <p>Additional External Attenuation Required: ${additionalAttenuation.toFixed(2)} dB</p>
+            `;
+        }
+    </script>
+</head>
+<body>
+    <h2>External Feedback Level Calcuations</h2>
+    <p><a href="https://community.apache-labs.com/viewtopic.php?f=20&t=2384" target="_blank">External Feedback Level Calculations</a></p>
+    <label for="power_watts">Peak Output Power (Watts):</label>
+    <input type="number" id="power_watts" step="any" value="1500">
+    <br>
+    <label for="coupling_factor">External Coupling Factor (dB):</label>
+    <input type="number" id="coupling_factor" step="any" value="44">
+    <br>
+    <input type="checkbox" id="radio_check">
+    <label for="radio_check">7000/8000 Adjustment</label>
+    <br>
+    <button onclick="calculate()">Calculate</button>
+    <div id="results"></div>
+</body>
+</html>
