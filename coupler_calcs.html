@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>External Feedback Level Calcuations</title>
+    <title>RF Power Calculator</title>
     <script>
         function calculate() {
             let powerWatts = parseFloat(document.getElementById('power_watts').value);
@@ -29,7 +29,8 @@
     </script>
 </head>
 <body>
-    <h2>External Feedback Level Calcuations</h2>
+    <h2>RF Power Calculator</h2>
+    <p style="color: red;"><strong>Do not exceed +13dBm at any rear panel input otherwise you risk damaging the radio</strong></p>
     <p><a href="https://community.apache-labs.com/viewtopic.php?f=20&t=2384" target="_blank">External Feedback Level Calculations</a></p>
     <label for="power_watts">Peak Output Power (Watts):</label>
     <input type="number" id="power_watts" step="any" value="1500">
