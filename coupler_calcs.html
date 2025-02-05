@@ -6,6 +6,7 @@
         function calculate() {
             let powerWatts = parseFloat(document.getElementById('power_watts').value);
             let couplingFactor = parseFloat(document.getElementById('coupling_factor').value);
+            let stepAttenuator = parseFloat(document.getElementById('step_attenuator').value);
             if (isNaN(powerWatts) || powerWatts <= 0) {
                 alert('Enter a valid power in Watts');
                 return;
@@ -14,11 +15,17 @@
                 alert('Enter a valid coupling factor in dB');
                 return;
             }
+            if (isNaN(stepAttenuator) || stepAttenuator < 0) {
+                alert('Enter a valid step attenuator setpoint in dB');
+                return;
+            }
+            
             let powerDbm = 10 * Math.log10(powerWatts) + 30;
             let couplerOutput = powerDbm - couplingFactor;
             let is7000or8000 = document.getElementById('radio_check').checked;
-            let inputPower = (is7000or8000 ? -11 : -17) + 25;
+            let inputPower = (is7000or8000 ? -11 : -17) + stepAttenuator;
             let additionalAttenuation = couplerOutput - inputPower;
+            
             document.getElementById('results').innerHTML = `
                 <p>Peak RF Power: ${powerDbm.toFixed(2)} dBm</p>
                 <p>Coupler Output Level @ Peak RF Power: ${couplerOutput.toFixed(2)} dBm</p>
@@ -37,6 +44,9 @@
     <br>
     <label for="coupling_factor">External Coupling Factor (dB):</label>
     <input type="number" id="coupling_factor" step="any" value="44">
+    <br>
+    <label for="step_attenuator">Desired Step Attenuator Setpoint (dB):</label>
+    <input type="number" id="step_attenuator" step="any" value="25">
     <br>
     <input type="checkbox" id="radio_check">
     <label for="radio_check">7000/8000 Adjustment</label>
