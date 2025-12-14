@@ -390,7 +390,7 @@
 
             if (isFinite(additionalAttenuationDb) && additionalAttenuationDb < 0){
                 warnbox.classList.add("show", "good");
-                warntext.textContent = "Additional external attenuation required is negative. This suggests the coupling factor is higher than needed for the selected step attenuator setpoint, so reducing the coupling factor is recommended if possible.";
+                warntext.textContent = "ⓘ The external coupling factor is higher than required for the selected step attenuator setpoint, so reducing it recommended if possible.";
                 return;
             }
         }
