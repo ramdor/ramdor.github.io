@@ -1,58 +1,472 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>External Feedback Level Calculations</title>
-    <script>
-        function calculate() {
-            let powerWatts = parseFloat(document.getElementById('power_watts').value);
-            let couplingFactor = parseFloat(document.getElementById('coupling_factor').value);
-            let stepAttenuator = parseFloat(document.getElementById('step_attenuator').value);
-            if (isNaN(powerWatts) || powerWatts <= 0) {
-                alert('Enter a valid power in Watts');
-                return;
-            }
-            if (isNaN(couplingFactor) || couplingFactor <= 0) {
-                alert('Enter a valid coupling factor in dB');
-                return;
-            }
-            if (isNaN(stepAttenuator) || stepAttenuator < 0) {
-                alert('Enter a valid step attenuator setpoint in dB');
-                return;
-            }
-            
-            let powerDbm = 10 * Math.log10(powerWatts) + 30;
-            let couplerOutput = powerDbm - couplingFactor;
-            let is7000or8000 = document.getElementById('radio_check').checked;
-            let inputPower = (is7000or8000 ? -11 : -17) + stepAttenuator;
-            let additionalAttenuation = couplerOutput - inputPower;
-            
-            document.getElementById('results').innerHTML = `
-                <p>Peak RF Power: ${powerDbm.toFixed(2)} dBm</p>
-                <p>Coupler Output Level @ Peak RF Power: ${couplerOutput.toFixed(2)} dBm</p>
-                <p>Required Input Power to Step Attenuator: ${inputPower.toFixed(2)} dBm</p>
-                <p>Additional External Attenuation Required: ${additionalAttenuation.toFixed(2)} dB</p>
-            `;
+    <style>
+        :root{
+            --bg: #0b1220;
+            --panel: rgba(255,255,255,0.06);
+            --panel2: rgba(255,255,255,0.08);
+            --text: rgba(255,255,255,0.92);
+            --muted: rgba(255,255,255,0.70);
+            --border: rgba(255,255,255,0.14);
+            --accent: #7dd3fc;
+            --good: #34d399;
+            --warn: #fb923c;
+            --danger: #fb7185;
+            --shadow: 0 18px 40px rgba(0,0,0,0.40);
+            --radius: 16px;
+            --radius2: 12px;
+            --focus: 0 0 0 4px rgba(125, 211, 252, 0.22);
         }
-    </script>
+        *{ box-sizing: border-box; }
+        body{
+            margin: 0;
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+            background: radial-gradient(1200px 900px at 20% 0%, rgba(125,211,252,0.16), transparent 60%),
+                        radial-gradient(900px 700px at 90% 20%, rgba(52,211,153,0.12), transparent 60%),
+                        var(--bg);
+            color: var(--text);
+            line-height: 1.45;
+        }
+        .wrap{
+            max-width: 920px;
+            margin: 40px auto;
+            padding: 0 16px 48px 16px;
+        }
+        header{
+            margin-bottom: 18px;
+        }
+        h1{
+            font-size: 28px;
+            margin: 0 0 6px 0;
+            letter-spacing: 0.2px;
+        }
+        .sub{
+            color: var(--muted);
+            margin: 0;
+            font-size: 14px;
+        }
+        .grid{
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+            margin-top: 18px;
+        }
+        @media (min-width: 860px){
+            .grid{ grid-template-columns: 1.1fr 0.9fr; }
+        }
+        .card{
+            background: linear-gradient(180deg, var(--panel2), var(--panel));
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px;
+        }
+        .card h2{
+            font-size: 16px;
+            margin: 0 0 12px 0;
+            color: rgba(255,255,255,0.92);
+            letter-spacing: 0.2px;
+        }
+        .notice{
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 12px 12px;
+            border-radius: var(--radius2);
+            background: rgba(251, 60, 60, 0.40);
+            border: 1px solid rgba(251, 113, 133, 0.22);
+            color: rgba(255,255,255,0.92);
+            margin-top: 14px;
+        }
+        .notice strong{ color: rgba(255,255,255,0.96); }
+        .icon{
+            width: 22px;
+            height: 22px;
+            flex: 0 0 22px;
+            display: grid;
+            place-items: center;
+            margin-top: 1px;
+        }
+        .icon span{
+            display: inline-block;
+            font-size: 18px;
+            line-height: 1;
+        }
+        .row{
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        @media (min-width: 520px){
+            .row{ grid-template-columns: 1fr 1fr; }
+        }
+        label{
+            display: block;
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+        input[type="number"]{
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(0,0,0,0.18);
+            color: var(--text);
+            outline: none;
+            font-size: 14px;
+        }
+        input[type="number"]:focus{
+            box-shadow: var(--focus);
+            border-color: rgba(125, 211, 252, 0.55);
+        }
+        .check{
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(0,0,0,0.12);
+            color: var(--text);
+            margin-top: 10px;
+        }
+        .check input{ transform: translateY(1px); }
+        .actions{
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 14px;
+            flex-wrap: wrap;
+        }
+        button{
+            border: 1px solid rgba(125, 211, 252, 0.42);
+            background: rgba(125, 211, 252, 0.16);
+            color: rgba(255,255,255,0.95);
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.06s ease, background 0.12s ease, border-color 0.12s ease;
+        }
+        button:hover{
+            background: rgba(125, 211, 252, 0.22);
+            border-color: rgba(125, 211, 252, 0.60);
+        }
+        button:active{
+            transform: translateY(1px);
+        }
+        .link{
+            color: rgba(125, 211, 252, 0.92);
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .link:hover{ text-decoration: underline; }
+        .error{
+            display: none;
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(251, 113, 133, 0.30);
+            background: rgba(251, 113, 133, 0.12);
+            color: rgba(255,255,255,0.92);
+            font-size: 13px;
+        }
+        .results{
+            display: grid;
+            gap: 10px;
+        }
+        .kv{
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            align-items: baseline;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(0,0,0,0.12);
+        }
+
+        .kv.good{ border-color: rgba(52, 211, 153, 0.28); background: rgba(52, 211, 153, 0.08); }
+        .kv.warn{ border-color: rgba(251, 146, 60, 0.30); background: rgba(251, 146, 60, 0.10); }
+        .kv.danger{ border-color: rgba(251, 113, 133, 0.34); background: rgba(251, 113, 133, 0.12); }
+        .k{
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .v{
+            font-weight: 600;
+            font-size: 14px;
+            color: rgba(255,255,255,0.95);
+            text-align: right;
+            white-space: nowrap;
+        }
+        .status{
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .badge{
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.08);
+        }
+        .badge.good{ border-color: rgba(52, 211, 153, 0.55); background: rgba(52, 211, 153, 0.40); }
+        .badge.warn{ border-color: rgba(251, 146, 60, 0.55); background: rgba(251, 146, 60, 0.40); }
+        .badge.danger{ border-color: rgba(251, 60, 60, 0.55); background: rgba(251, 60, 60, 0.40); }
+        .warnbox{
+            display: none;
+            margin-top: 12px;
+            padding: 12px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(0,0,0,0.12);
+        }
+
+        .kv.good{ border-color: rgba(52, 211, 153, 0.55); background: rgba(52, 211, 153, 0.40); }
+        .kv.warn{ border-color: rgba(251, 146, 60, 0.30); background: rgba(251, 146, 60, 0.10); }
+        .kv.danger{ border-color: rgba(251, 113, 133, 0.34); background: rgba(251, 113, 133, 0.12); }
+        .warnbox.show{ display: block; }
+        .warnbox.good{ border-color: rgba(52, 211, 153, 0.55); background: rgba(52, 211, 153, 0.40); }
+        .warnbox.warn{ border-color: rgba(251, 146, 60, 0.55); background: rgba(251, 146, 60, 0.40); }
+        .warnbox.danger{ border-color: rgba(251, 60, 60, 0.55); background: rgba(251, 60, 60, 0.40); }
+        .small{
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+        footer{
+            margin-top: 18px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+        .mono{
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+    </style>
 </head>
 <body>
-    <h2>External Feedback Level Calculations</h2>
-	<h3>Based on calculations by WU2O</h3>
-    <p style="color: red;"><strong>Do not exceed +13dBm at any rear panel input otherwise you risk damaging the radio</strong></p>
-    <p><a href="https://community.apache-labs.com/viewtopic.php?f=20&t=2384" target="_blank">External Feedback Level Calculations</a></p>	
-    <label for="power_watts">Peak Output Power (Watts):</label>
-    <input type="number" id="power_watts" step="any" value="1500">
-    <br>
-    <label for="coupling_factor">External Coupling Factor (dB):</label>
-    <input type="number" id="coupling_factor" step="any" value="44">
-    <br>
-    <label for="step_attenuator">Desired Step Attenuator Setpoint (dB):</label>
-    <input type="number" id="step_attenuator" step="any" value="25">
-    <br>
-    <input type="checkbox" id="radio_check">
-    <label for="radio_check">7000/8000 Adjustment</label>
-    <br>
-    <button onclick="calculate()">Calculate</button>
-    <div id="results"></div>
+    <div class="wrap">
+        <header>
+            <h1>External Feedback Level Calculations</h1>
+            <p class="sub">Based on calculations by WU2O</p>
+            <div class="notice">
+                <div class="icon"><span>⚠</span></div>
+                <div>
+                    <div><strong>Do not exceed +13 dBm</strong> at any rear panel input.</div>
+                    <div class="sub">At 13 dBm or above, there is a possibility that the ANAN RF input could be damaged.</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid">
+            <section class="card">
+                <h2>Inputs</h2>
+
+                <div class="row">
+                    <div>
+                        <label for="power_watts">Peak output power (Watts)</label>
+                        <input type="number" id="power_watts" step="any" inputmode="decimal" value="1500">
+                    </div>
+                    <div>
+                        <label for="coupling_factor">External coupling factor (dB)</label>
+                        <input type="number" id="coupling_factor" step="any" inputmode="decimal" value="44">
+                    </div>
+                </div>
+
+                <div class="row" style="margin-top: 10px;">
+                    <div>
+                        <label for="step_attenuator">Desired step attenuator setpoint (dB)</label>
+                        <input type="number" id="step_attenuator" step="any" inputmode="decimal" value="25">
+                    </div>
+                    <div>
+						<label>Adjustment</label>
+                        <div class="check">
+                            <input type="checkbox" id="radio_check">
+                            <label for="radio_check" style="margin:0;color:rgba(255,255,255,0.90);font-size:14px;">7000/8000</label>
+                        </div>
+                        <div class="small">Changes the required input power offset used in the calculation.</div>
+                    </div>
+                </div>
+
+                <div class="actions">
+<a class="link" href="https://community.apache-labs.com/viewtopic.php?f=20&t=2384" target="_blank" rel="noopener noreferrer">Reference discussion</a>
+                </div>
+
+                <div id="error" class="error"></div>
+            </section>
+
+            <section class="card">
+                <h2>Results</h2>
+
+                <div id="results" class="results">
+                    <div class="kv">
+                        <div class="k">Peak RF power</div>
+                        <div class="v mono" id="out_power_dbm">—</div>
+                    </div>
+                    <div class="kv" id="kv_coupler">
+                        <div class="k">Coupler output level @ peak RF power</div>
+                        <div class="v mono" id="out_coupler_dbm">—</div>
+                    </div>
+                    <div class="kv">
+                        <div class="k">Required input power to step attenuator</div>
+                        <div class="v mono" id="out_input_dbm">—</div>
+                    </div>
+                    <div class="kv">
+                        <div class="k">Additional external attenuation required</div>
+                        <div class="v mono" id="out_additional_db">—</div>
+                    </div>
+					<div class="kv">
+                        <div class="k">Estimated step attenuation used</div>
+                        <div class="v mono" id="out_estimated_db">—</div>
+                    </div>
+                </div>
+
+                <div id="warnbox" class="warnbox">
+                    <div id="warntext"></div>
+                </div>
+
+                <footer>
+                    Thresholds are near limit at <span class="mono">≥ 12.50 dBm</span>, over limit at <span class="mono">≥ 13.00 dBm</span>.
+                </footer>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        function formatDb(value){
+            if (!isFinite(value)) return "—";
+            return value.toFixed(2) + " dB";
+        }
+
+        function formatDbm(value){
+            if (!isFinite(value)) return "—";
+            return value.toFixed(2) + " dBm";
+        }
+
+        function setError(message){
+            const error = document.getElementById("error");
+            if (message && message.length > 0){
+                error.textContent = message;
+                error.style.display = "block";
+                return;
+            }
+            error.textContent = "";
+            error.style.display = "none";
+        }
+
+        function setWarn(couplerOutputDbm){
+            const warnbox = document.getElementById("warnbox");
+            const warntext = document.getElementById("warntext");
+
+            const nearThresholdDbm = 12.50;
+            const dangerThresholdDbm = 13.00;
+
+            warnbox.classList.remove("show", "warn", "danger");
+            warntext.textContent = "";
+
+            if (!isFinite(couplerOutputDbm)){
+                return;
+            }
+
+            if (couplerOutputDbm >= dangerThresholdDbm){
+                warnbox.classList.add("show", "danger");
+                warntext.textContent = "⚠ The output from the coupler is at or above +13 dBm. Reduce drive and/or add attenuation to avoid possible RF input damage.";
+                return;
+            }
+
+            if (couplerOutputDbm >= nearThresholdDbm){
+                warnbox.classList.add("show", "warn");
+                warntext.textContent = "⚠ Coupler level is approaching +13 dBm. Consider reducing drive and/or adding attenuation.";
+                return;
+            }
+        }
+
+
+        function setCouplerBadge(couplerOutputDbm){
+            const target = document.getElementById("out_coupler_dbm");
+            const kv = document.getElementById("kv_coupler");
+
+            const nearThresholdDbm = 12.50;
+            const dangerThresholdDbm = 13.00;
+
+            if (kv){
+                kv.classList.remove("good", "warn", "danger");
+            }
+
+            let badgeClass = "good";
+            let badgeText = "OK";
+
+            if (isFinite(couplerOutputDbm) && couplerOutputDbm >= dangerThresholdDbm){
+                badgeClass = "danger";
+                badgeText = "OVER LIMIT";
+            } else if (isFinite(couplerOutputDbm) && couplerOutputDbm >= nearThresholdDbm){
+                badgeClass = "warn";
+                badgeText = "NEAR LIMIT";
+            }
+
+            if (kv){
+                kv.classList.add(badgeClass);
+            }
+
+            const valueText = formatDbm(couplerOutputDbm);
+            target.innerHTML = "<span class=\"status\"><span>" + valueText + "</span><span class=\"badge " + badgeClass + "\">" + badgeText + "</span></span>";
+        }
+
+
+        function calculate(){
+            const powerWatts = parseFloat(document.getElementById("power_watts").value);
+            const couplingFactor = parseFloat(document.getElementById("coupling_factor").value);
+            const stepAttenuator = parseFloat(document.getElementById("step_attenuator").value);
+            const is7000or8000 = document.getElementById("radio_check").checked;
+
+            if (!isFinite(powerWatts) || powerWatts <= 0){
+                setError("Enter a valid peak output power in Watts.");
+                return;
+            }
+            if (!isFinite(couplingFactor) || couplingFactor <= 0){
+                setError("Enter a valid external coupling factor in dB. (> 0)");
+                return;
+            }
+            if (!isFinite(stepAttenuator) || stepAttenuator < 0 || stepAttenuator > 31){
+                setError("Enter a valid step attenuator setpoint in dB. (0 to 31)");
+                return;
+            }
+
+            setError("");
+
+            const powerDbm = 10 * Math.log10(powerWatts) + 30;
+            const couplerOutputDbm = powerDbm - couplingFactor;
+            const inputPowerDbm = (is7000or8000 ? -11 : -17) + stepAttenuator;
+            const additionalAttenuationDb = couplerOutputDbm - inputPowerDbm;
+			const estimatedStepAttenuation = stepAttenuator + additionalAttenuationDb;
+
+            document.getElementById("out_power_dbm").textContent = formatDbm(powerDbm);
+            document.getElementById("out_input_dbm").textContent = formatDbm(inputPowerDbm);
+            document.getElementById("out_additional_db").textContent = formatDb(additionalAttenuationDb);
+			document.getElementById("out_estimated_db").textContent = formatDb(estimatedStepAttenuation);
+
+            setCouplerBadge(couplerOutputDbm);
+            setWarn(couplerOutputDbm);
+        }
+
+["power_watts", "coupling_factor", "step_attenuator", "radio_check"].forEach(function(id){
+            document.getElementById(id).addEventListener("input", calculate);
+            document.getElementById(id).addEventListener("change", calculate);
+        });
+
+        calculate();
+    </script>
 </body>
 </html>
