@@ -327,10 +327,6 @@
                         <div class="k">Additional external attenuation required</div>
                         <div class="v mono" id="out_additional_db">—</div>
                     </div>
-					<div class="kv">
-                        <div class="k">Estimated step attenuation used</div>
-                        <div class="v mono" id="out_estimated_db">—</div>
-                    </div>
                 </div>
 
                 <div id="warnbox" class="warnbox">
@@ -450,12 +446,10 @@
             const couplerOutputDbm = powerDbm - couplingFactor;
             const inputPowerDbm = (is7000or8000 ? -11 : -17) + stepAttenuator;
             const additionalAttenuationDb = couplerOutputDbm - inputPowerDbm;
-			const estimatedStepAttenuation = stepAttenuator + additionalAttenuationDb;
 
             document.getElementById("out_power_dbm").textContent = formatDbm(powerDbm);
             document.getElementById("out_input_dbm").textContent = formatDbm(inputPowerDbm);
             document.getElementById("out_additional_db").textContent = formatDb(additionalAttenuationDb);
-			document.getElementById("out_estimated_db").textContent = formatDb(estimatedStepAttenuation);
 
             setCouplerBadge(couplerOutputDbm);
             setWarn(couplerOutputDbm);
