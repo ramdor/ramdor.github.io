@@ -362,14 +362,14 @@
             error.style.display = "none";
         }
 
-        function setWarn(couplerOutputDbm){
+        function setWarn(couplerOutputDbm, additionalAttenuationDb){
             const warnbox = document.getElementById("warnbox");
             const warntext = document.getElementById("warntext");
 
             const nearThresholdDbm = 12.50;
             const dangerThresholdDbm = 13.00;
 
-            warnbox.classList.remove("show", "warn", "danger");
+            warnbox.classList.remove("show", "good", "warn", "danger");
             warntext.textContent = "";
 
             if (!isFinite(couplerOutputDbm)){
@@ -385,6 +385,12 @@
             if (couplerOutputDbm >= nearThresholdDbm){
                 warnbox.classList.add("show", "warn");
                 warntext.textContent = "⚠ Coupler output level is approaching +13 dBm. Consider reducing drive and/or adding attenuation.";
+                return;
+            }
+
+            if (isFinite(additionalAttenuationDb) && additionalAttenuationDb < 0){
+                warnbox.classList.add("show", "good");
+                warntext.textContent = "Additional external attenuation required is negative. This suggests the coupling factor is higher than needed for the selected step attenuator setpoint, so reducing the coupling factor is recommended if possible.";
                 return;
             }
         }
@@ -452,7 +458,7 @@
             document.getElementById("out_additional_db").textContent = formatDb(additionalAttenuationDb);
 
             setCouplerBadge(couplerOutputDbm);
-            setWarn(couplerOutputDbm);
+            setWarn(couplerOutputDbm, additionalAttenuationDb);
         }
 
 ["power_watts", "coupling_factor", "step_attenuator", "radio_check"].forEach(function(id){
