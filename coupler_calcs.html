@@ -251,6 +251,12 @@
             color: var(--muted);
             font-size: 12px;
         }
+        .site_footer{
+            margin-top: 18px;
+            text-align: center;
+            color: rgba(255,255,255,0.45);
+            font-size: 12px;
+        }
         .mono{
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         }
@@ -289,7 +295,6 @@
                     <div>
                         <label for="step_attenuator">Desired step attenuator setpoint (dB)</label>
                         <input type="number" id="step_attenuator" step="any" inputmode="decimal" value="25">
-						<div class="small">25dB is the optimal desired setpoint to minimise cross talk.</div>
                     </div>
                     <div>
 						<label>Adjustment</label>
@@ -339,6 +344,7 @@
                 </footer>
             </section>
         </div>
+        <div class="site_footer">(c) 2025 - MW0LGE</div>
     </div>
 
     <script>
