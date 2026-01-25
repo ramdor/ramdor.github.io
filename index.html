@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hytale ServerCode Decoder - Base64/DEFLATE → JSON</title>
+  <meta name="color-scheme" content="dark light">
+  <style>
+    :root{
+      --bg1:#0b1020;
+      --bg2:#0a1b2b;
+      --card:#0f172a;
+      --card2:#0b1222;
+      --text:#e6edf3;
+      --muted:#9aa7b6;
+      --border:rgba(255,255,255,.10);
+      --shadow:0 20px 60px rgba(0,0,0,.45);
+      --radius:18px;
+      --accent:#60a5fa;
+      --accent2:#34d399;
+      --danger:#fb7185;
+      --warn:#fbbf24;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root{
+        --bg1:#eef2ff;
+        --bg2:#eff6ff;
+        --card:#ffffff;
+        --card2:#f8fafc;
+        --text:#0b1220;
+        --muted:#425466;
+        --border:rgba(15,23,42,.12);
+        --shadow:0 20px 60px rgba(15,23,42,.10);
+      }
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(900px 500px at 15% 10%, rgba(96,165,250,.25), transparent 60%),
+        radial-gradient(700px 420px at 85% 30%, rgba(52,211,153,.18), transparent 60%),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+      padding: 28px 16px 40px;
+    }
+
+    .wrap{
+      max-width: 1060px;
+      margin: 0 auto;
+    }
+
+    header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom: 16px;
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    h1{
+      margin:0;
+      font-size: 22px;
+      letter-spacing:.2px;
+      line-height:1.2;
+    }
+
+    .sub{
+      margin:0;
+      color: var(--muted);
+      font-size: 13.5px;
+      line-height: 1.4;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    @media (min-width: 980px){
+      .grid{
+        grid-template-columns: 1fr 1fr;
+        align-items: stretch;
+      }
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .cardInner{
+      padding: 16px;
+      background: rgba(0,0,0,.06);
+    }
+
+    @media (prefers-color-scheme: light) {
+      .cardInner{ background: rgba(255,255,255,.55); }
+    }
+
+    .cardHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom: 10px;
+    }
+
+    .cardTitle{
+      font-size: 13px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .toolbar{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    button{
+      appearance:none;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 9px 12px;
+      font-size: 13px;
+      cursor:pointer;
+      transition: transform .05s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+      white-space:nowrap;
+    }
+
+    button:hover{
+      background: rgba(255,255,255,.10);
+      border-color: rgba(255,255,255,.18);
+    }
+
+    button:active{ transform: translateY(1px); }
+
+    .primary{
+      background: linear-gradient(180deg, rgba(96,165,250,.35), rgba(96,165,250,.18));
+      border-color: rgba(96,165,250,.45);
+    }
+
+    .primary:hover{
+      background: linear-gradient(180deg, rgba(96,165,250,.45), rgba(96,165,250,.22));
+      border-color: rgba(96,165,250,.65);
+    }
+
+    .good{
+      background: linear-gradient(180deg, rgba(52,211,153,.30), rgba(52,211,153,.16));
+      border-color: rgba(52,211,153,.45);
+    }
+
+    .good:hover{
+      background: linear-gradient(180deg, rgba(52,211,153,.38), rgba(52,211,153,.20));
+      border-color: rgba(52,211,153,.65);
+    }
+
+    textarea{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      color: var(--text);
+      padding: 12px;
+      font-size: 13.5px;
+      line-height: 1.45;
+      outline: none;
+      resize: vertical;
+    }
+
+    @media (prefers-color-scheme: light) {
+      textarea{ background: rgba(255,255,255,.85); }
+    }
+
+    #code{
+      font-family: var(--mono);
+      min-height: 140px;
+      max-height: 420px;
+    }
+
+    #out{
+      font-family: var(--mono);
+      min-height: 140px;
+      max-height: 700px;
+      height: 420px;
+      resize: none;
+    }
+
+    .hintRow{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12.5px;
+      flex-wrap:wrap;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.05);
+    }
+
+    .dot{
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--muted);
+      opacity: .9;
+      flex: 0 0 auto;
+    }
+
+    .dot.ok{ background: var(--accent2); }
+    .dot.warn{ background: var(--warn); }
+    .dot.bad{ background: var(--danger); }
+
+    .mono{ font-family: var(--mono); }
+
+    .footerNote{
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.5;
+      text-align:center;
+    }
+
+    a{ color: inherit; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>Hytale ServerCode Decoder - Base64/DEFLATE → JSON</h1>
+        <p class="sub">Paste a ServerCode, then convert it. Everything runs locally in your browser.</p>
+      </div>
+      <div class="pill" id="statusPill" title="Status">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">Ready</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="card">
+        <div class="cardInner">
+          <div class="cardHeader">
+            <p class="cardTitle">Input</p>
+            <div class="toolbar">
+              <button id="pasteBtn">Paste</button>
+              <button class="primary" id="convertBtn">Convert</button>
+              <button id="clearBtn">Clear</button>
+            </div>
+          </div>
+          <textarea id="code" spellcheck="false" placeholder="Paste ServerCode here"></textarea>
+          <div class="hintRow">
+            <span class="pill">Tip: <span class="mono">Ctrl+V</span> paste also works</span>
+            <span class="pill">Convert: <span class="mono">Ctrl+Enter</span></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="cardInner">
+          <div class="cardHeader">
+            <p class="cardTitle">Output</p>
+            <div class="toolbar">
+              <button class="good" id="copyBtn">Copy JSON</button>
+            </div>
+          </div>
+          <textarea id="out" readonly spellcheck="false"></textarea>
+        </div>
+      </section>
+    </div>
+
+    <div class="footerNote">
+      Uses raw DEFLATE inflate in the browser. No data is uploaded anywhere. - Ramdor (c) 2026
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+  <script>
+    const codeEl = document.getElementById("code");
+    const outEl = document.getElementById("out");
+    const statusTextEl = document.getElementById("statusText");
+    const statusDotEl = document.getElementById("statusDot");
+
+    function setStatus(text, kind) {
+      statusTextEl.textContent = text;
+      statusDotEl.className = "dot" + (kind ? (" " + kind) : "");
+    }
+
+    function normaliseInput(s) {
+      return s.trim().replace(/^["']|["']$/g, "").replace(/\s+/g, "");
+    }
+
+    function b64ToBytes(b64) {
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    }
+
+    function tryInflate(bytes) {
+      try {
+        return window.pako.inflateRaw(bytes);
+      } catch {
+        try {
+          return window.pako.inflate(bytes);
+        } catch {
+          return bytes;
+        }
+      }
+    }
+
+    function bytesToUtf8(bytes) {
+      return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    }
+
+    function convert() {
+      const raw = normaliseInput(codeEl.value);
+      if (!raw) {
+        setStatus("Paste a ServerCode first", "warn");
+        outEl.value = "";
+        return;
+      }
+
+      let bytes;
+      try {
+        bytes = b64ToBytes(raw);
+      } catch (e) {
+        setStatus("Base64 decode failed", "bad");
+        outEl.value = String(e);
+        return;
+      }
+
+      const inflated = tryInflate(bytes);
+      const text = bytesToUtf8(inflated);
+
+      try {
+        const obj = JSON.parse(text);
+        outEl.value = JSON.stringify(obj, null, 2);
+        setStatus("OK", "ok");
+      } catch {
+        outEl.value = text;
+        setStatus("Decoded, but not JSON", "warn");
+      }
+    }
+
+    async function pasteFromClipboard() {
+      try {
+        const txt = await navigator.clipboard.readText();
+        if (!txt) {
+          setStatus("Clipboard was empty", "warn");
+          return;
+        }
+        codeEl.value = txt;
+        setStatus("Pasted", "ok");
+        codeEl.focus();
+      } catch (e) {
+        setStatus("Clipboard access blocked by the browser", "warn");
+      }
+    }
+
+    async function copyJson() {
+      const txt = outEl.value || "";
+      if (!txt) {
+        setStatus("Nothing to copy", "warn");
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(txt);
+        setStatus("Copied", "ok");
+      } catch {
+        outEl.focus();
+        outEl.select();
+        document.execCommand("copy");
+        setStatus("Copied", "ok");
+      }
+    }
+
+    function clearAll() {
+      codeEl.value = "";
+      outEl.value = "";
+      setStatus("Ready", "");
+      codeEl.focus();
+    }
+
+    document.getElementById("convertBtn").addEventListener("click", convert);
+    document.getElementById("pasteBtn").addEventListener("click", pasteFromClipboard);
+    document.getElementById("copyBtn").addEventListener("click", copyJson);
+    document.getElementById("clearBtn").addEventListener("click", clearAll);
+
+    document.addEventListener("keydown", (e) => {
+      if (e.ctrlKey && e.key === "Enter") {
+        e.preventDefault();
+        convert();
+      }
+    });
+
+    setStatus("Ready", "");
+  </script>
+</body>
+</html>
